@@ -1,85 +1,42 @@
-# Income Detection Model Training and Deployment
+# Income Detection — Training and Deployment
 
-This repository trains and deploys machine learning model for census data income detection. The dataset can be found here: <https://archive.ics.uci.edu/ml/datasets/Census-Income+(KDD>)
+An end-to-end MLOps example: train a CatBoost classifier on the UCI Census Income dataset, serve it behind a FastAPI endpoint, containerize it with Docker, deploy to Kubernetes, and load-test with Locust.
 
-The target variable is "income", indicating whether the person's income is above $50k or below $50k.
+The dataset is [Census Income (KDD)](https://archive.ics.uci.edu/ml/datasets/Census-Income+(KDD)). The target variable is `income` — whether a person earns above or below $50k/yr.
+
+**Stack:** CatBoost · scikit-learn · FastAPI · Pydantic · Docker · Kubernetes · Locust · Terraform
 
 ## Directory Explanation
 
-The file structure looks like the following:
+The repo is split into four parts:
 
 ```
-+--- [app]
-|    |
-|    +--- person.py
-|    +--- sklearn_income_classifier.pkl
-|    +--- main.py
-|    +--- catboost_income_classifier.cbm
-+--- [assets]
-|    |
-+--- [test]
-|    |
-|    +--- perf.py
-|    +--- api_test.py
-+--- [train]
-|    |
-|    +--- [data]
-|    |    |
-|    |    +--- adult.data
-|    |    +--- adult.names
-|    |    +--- adult.test
-|    +--- catboost_model_training.py
-|    +--- helper.py
-|    +--- sklearn_model_training.py
-|    +--- explore.py
-|    +--- evaluate.py
-+--- deployment.yaml
-+--- requirements.txt
-+--- Dockerfile
-+--- README.md
-+--- .gitignore
+income_detection_api
+├── app/         FastAPI service + trained model artifacts
+├── assets/      images used by this README
+├── test/        API and load tests
+└── train/       training, EDA, evaluation, and the dataset
 ```
 
-### / (_the main directory_)
+Details:
 
-- `Dockerfile` to containerize the fast api app
-- `deployment.yaml` deployment file for Kubernestes.
-- `requirements.txt` file for python package requirements
-
-### /app
-
-this is the fast api related code
-
-- `main.py`: main fast api code
-- `person.py`: data validation model
-- `catboost_income_classifier.cbm`: catboost model cbm file
-- `sklearn_income_classifier.pkl`: sklearn model pickle file (not used with fast api)
-
-### /assets
-
-image files for this README
-
-### /test
-
-test related code, such as api test and load test
-
-- `perf.py`: file to perform load test
-- `api_test.py`: file to perform api request test
-
-### /train
-
-training related code
-
-- `catboost_model_training.py`: catboost model training code
-- `sklearn_model_training.py`: sklearn model training code
-- `explore.py`: code for eda and visualization
-- `evaluate.py`: code for model evaluation
-- `helper.py`: helper functions for model training and visualization
-- `/data`: training data files
+| Path | Contents |
+| --- | --- |
+| `app/main.py` | FastAPI app; `GET /` and `POST /predict` |
+| `app/person.py` | Pydantic request/response validation model |
+| `app/catboost_income_classifier.cbm` | trained CatBoost model |
+| `app/sklearn_income_classifier.pkl` | trained scikit-learn pipeline (not wired into the API) |
+| `train/catboost_model_training.py` | downloads the data, trains CatBoost, exports the model |
+| `train/sklearn_model_training.py` | scikit-learn pipeline variant |
+| `train/explore.py`, `train/evaluate.py` | EDA and model evaluation |
+| `test/api_test.py` | plain-Python request test |
+| `test/perf.py` | Locust load test |
+| `Dockerfile`, `deployment.yaml` | container image and Kubernetes deployment |
+| `terraform/main.tf` | Terraform for the AWS-side infrastructure |
 
 ## Instructions
 
-### 1\. Training
+### 1. Training
 
 Training related files are under the `/train` folder. For training the model, catboost_model_training.py can be used. Helper function download_census_data downloads and saves the data under data folder. Then the scripts builds catboost classification model. Then, we add model columns into the model and save the model to the "app" folder.
 
@@ -87,11 +44,11 @@ Additionally, one can explore and evaluate the data using the explore.py and eva
 
 If you want to fit a sklearn model with a pipeline, you can use sklearn_model_training.py.
 
-### 2\. Deployment
+### 2. Deployment
 
 Most deployment related files are under the `/app` folder.
 
-if you want to run fast api directly without Docker or Kubernestes, run the following:
+if you want to run fast api directly without Docker or Kubernetes, run the following:
 
 ```
 cd income_detection_api
@@ -99,7 +56,7 @@ python -m venv env
 source env/bin/activate
 pip install -r requirements.txt
 cd app
-pyton main.py
+python main.py
 ```
 
 To containerize it with Docker and serving it, run the following:
@@ -109,16 +66,16 @@ docker buildx build --platform=linux/amd64 -t myimage .
 docker run -d --platform=linux/amd64 --name mycontainer -p 8000:8000 myimage
 ```
 
-I have also uploaded the image to Docker Hub. The link is here: <https://hub.docker.com/repository/docker/ybaktir/income_detection>
+I have also uploaded the image to Docker Hub. The link is here: <https://hub.docker.com/r/jbaktir/income_detection>
 
-To orchestrate with Kubernestes:
+To orchestrate with Kubernetes:
 
 ```
 minikube start
 kubectl apply -f deployment.yaml
 ```
 
-Trouble shooting for Kubernestes:
+Trouble shooting for Kubernetes:
 
 ```
 kubectl get services  #to check the status
@@ -139,7 +96,7 @@ to get around the port already is use problem, you can kill process that uses th
 kill -9 $(lsof -ti:6000)
 ```
 
-### 3\. Testing
+### 3. Testing
 
 for load testing:
 
@@ -150,56 +107,45 @@ locust -f perf.py
 
 Also, for simple python requests you can use `api_test.py`
 
-# Deployment to AWS
+## Running on a remote host
 
-```
-sudo yum update
-sudo yum install git -y
-```
+The steps above assume a local machine. To run on an EC2 instance or any other host:
 
-You will need to clone the repo here. As for password, either I will need to provide it to you or you will need to generate it if you have access to the repo.
-
-```
-git clone https://github.com/ybaktir/income_detection_api.git
-$ Cloning into 'income_detection_api'...
-$ Username for 'https://github.com': ybaktir
-$ Password for 'https://ybaktir@github.com':
-```
-
-After the installation find the income_detection_api folder
-
-```
+```bash
+git clone https://github.com/jbaktir/income_detection_api.git
 cd income_detection_api
-sudo pip3 install -r requirements.txt
-sudo python3 app/main.py
+python3 -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+python3 app/main.py
 ```
 
-After this visit the instance's public api
+`app/main.py` serves on port `80`, so the API is reachable on the instance's port `80` (`http://<host>/docs` for the OpenAPI UI). Keep it behind a reverse proxy and terminate TLS there if you expose it publicly.
 
-# Visuals
+## Visuals
 
 When the app is up and running, one should see the following visuals.
 
-## main page
+### main page
 
 ![](assets/markdown-img-paste-20220123182622901.png)
 
-## FastAPI documentation
+### FastAPI documentation
 
 ![](assets/markdown-img-paste-20220123182816587.png)
 
-## FastAPI sample request
+### FastAPI sample request
 
 ![](assets/markdown-img-paste-20220123182956152.png)
 
-## Successful Response
+### Successful Response
 
 ![](assets/markdown-img-paste-20220123192027754.png)
 
-## Validation Control
+### Validation Control
 
 ![](assets/markdown-img-paste-20220123192346994.png)
 
-## Load Test
+### Load Test
 
 ![](assets/markdown-img-paste-20220123192759809.png)
