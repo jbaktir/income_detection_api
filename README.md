@@ -1,8 +1,6 @@
 # Income Detection — Training and Deployment
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.95%2B-009688.svg)
 ![CatBoost](https://img.shields.io/badge/CatBoost-yellow.svg)
 ![Docker](https://img.shields.io/badge/Docker-2496ED.svg?logo=docker&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5.svg?logo=kubernetes&logoColor=white)
